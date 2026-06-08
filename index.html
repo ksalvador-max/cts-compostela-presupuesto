@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTS Compostela · Herramienta Presupuestaria</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --dark: #1A1A2E; --mid: #2D3561; --white: #FFFFFF;
+  --lgray: #F5F5F3; --gray: #E8E6E0; --border: #E2E0DA;
+  --s1: #534AB7; --s2: #0F6E56; --s3: #854F0B; --s4: #185FA5; --s5: #993C1D; --tr: #3D3D3A;
+  --bg-s1: #EDE8FD; --bg-s2: #E0F5EE; --bg-s3: #FEF3E2; --bg-s4: #E3EFF9; --bg-s5: #FCEDE8;
+  --green: #0F6E56; --amber: #854F0B; --orange: #E65100;
+  --gold: #C8956A;
+  --input-bg: #EBF3FA; --input-border: #93C5FD;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: #F8F7F4; color: var(--dark); min-height: 100vh; }
+
+/* ── HEADER ── */
+.header { background: var(--dark); padding: 28px 40px 24px; display: flex; justify-content: space-between; align-items: flex-end; }
+.header-title { }
+.header-title h1 { font-size: 22px; font-weight: 600; color: var(--white); letter-spacing: -0.3px; line-height: 1.2; }
+.header-title p { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 4px; font-weight: 300; }
+.header-badge { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 8px 14px; text-align: right; }
+.header-badge .pvp { font-family: 'DM Mono', monospace; font-size: 24px; color: #FFD700; font-weight: 500; }
+.header-badge .pvp-label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+.semaforo { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+.semaforo.ok { color: #6EE7B7; }
+.semaforo.fail { color: #FCA5A5; }
+
+/* ── TABS ── */
+.tabs { background: var(--dark); padding: 0 40px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; gap: 2px; }
+.tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.35); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; white-space: nowrap; }
+.tab:hover { color: rgba(255,255,255,0.65); }
+.tab.active { color: var(--white); border-bottom-color: var(--gold); }
+
+/* ── MAIN LAYOUT ── */
+.main { padding: 28px 40px; max-width: 1200px; }
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── PARAMS PANEL ── */
+.params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.param-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.param-card-header { padding: 12px 16px; background: var(--dark); font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.06em; }
+.param-row { display: flex; align-items: center; padding: 9px 16px; border-bottom: 1px solid var(--lgray); gap: 10px; }
+.param-row:last-child { border-bottom: none; }
+.param-label { font-size: 12px; color: var(--dark); flex: 1; }
+.param-input { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: #1e40af; background: var(--input-bg); border: 1.5px solid var(--input-border); border-radius: 6px; padding: 4px 10px; width: 110px; text-align: right; outline: none; transition: border-color 0.15s; }
+.param-input:focus { border-color: #3b82f6; }
+.param-unit { font-size: 11px; color: rgba(0,0,0,0.35); min-width: 28px; }
+
+/* ── BUDGET WATERFALL ── */
+.budget-wrap { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+.waterfall { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.wf-block-title { padding: 10px 18px; background: var(--lgray); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(0,0,0,0.4); border-bottom: 1px solid var(--border); }
+.wf-line { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid var(--lgray); }
+.wf-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+.wf-label { font-size: 12px; color: var(--dark); flex: 1; line-height: 1.3; }
+.wf-bar-wrap { width: 100px; flex-shrink: 0; }
+.wf-bar-bg { background: var(--gray); border-radius: 3px; height: 5px; }
+.wf-bar-fill { height: 5px; border-radius: 3px; transition: width 0.4s ease; }
+.wf-pct { font-size: 10px; color: rgba(0,0,0,0.35); min-width: 32px; text-align: right; font-family: 'DM Mono', monospace; }
+.wf-amount { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--dark); min-width: 90px; text-align: right; }
+.wf-subtotal { display: flex; justify-content: space-between; align-items: center; padding: 11px 18px; background: var(--lgray); border-top: 1.5px solid var(--border); border-bottom: 1px solid var(--border); }
+.wf-subtotal .sl { font-size: 12px; font-weight: 600; color: var(--dark); }
+.wf-subtotal .sa { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 600; color: var(--dark); }
+.wf-margen { display: flex; justify-content: space-between; align-items: center; padding: 11px 18px; background: #F0FAF6; border-bottom: 1px solid #A7F3D0; }
+.wf-margen .ml { font-size: 12px; font-weight: 500; color: var(--green); }
+.wf-margen .ma { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 600; color: var(--green); }
+.wf-pvp-neto { display: flex; justify-content: space-between; align-items: center; padding: 13px 18px; background: var(--dark); border-bottom: 1px solid rgba(255,255,255,0.08); }
+.wf-pvp-neto .pl { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.7); }
+.wf-pvp-neto .pa { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 600; color: var(--white); }
+.wf-iva { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; background: #FFF7ED; border-bottom: 1px solid #FED7AA; }
+.wf-iva .il { font-size: 12px; font-weight: 500; color: var(--orange); }
+.wf-iva .ia { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--orange); }
+.wf-total { display: flex; justify-content: space-between; align-items: center; padding: 18px; background: #1A1A2E; }
+.wf-total .tl { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); }
+.wf-total .ta { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 600; color: #FFD700; }
+
+/* ── SIDE PANEL ── */
+.side-panel { display: flex; flex-direction: column; gap: 14px; }
+.side-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.side-card-title { padding: 10px 14px; background: var(--lgray); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(0,0,0,0.4); border-bottom: 1px solid var(--border); }
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; }
+.kpi-item { padding: 14px; border-bottom: 1px solid var(--lgray); border-right: 1px solid var(--lgray); }
+.kpi-item:nth-child(2n) { border-right: none; }
+.kpi-item:last-child, .kpi-item:nth-last-child(2):nth-child(odd) { border-bottom: none; }
+.kpi-val { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: var(--dark); }
+.kpi-lbl { font-size: 10px; color: rgba(0,0,0,0.4); margin-top: 2px; }
+.alert-box { padding: 12px 14px; font-size: 12px; font-weight: 500; }
+.alert-ok { background: #F0FAF6; color: var(--green); border-top: 1px solid #A7F3D0; }
+.alert-fail { background: #FEF2F2; color: #DC2626; border-top: 1px solid #FCA5A5; }
+
+/* ── TEAM TABLE ── */
+.team-table { width: 100%; border-collapse: collapse; }
+.team-table th { background: var(--dark); color: rgba(255,255,255,0.6); font-size: 10px; font-weight: 500; padding: 8px 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.05em; }
+.team-table th.r { text-align: right; }
+.team-table td { padding: 8px 12px; border-bottom: 1px solid var(--lgray); font-size: 12px; vertical-align: middle; }
+.team-table td.r { text-align: right; font-family: 'DM Mono', monospace; }
+.team-table tr:hover td { background: var(--lgray); }
+.team-table tr.tot-row td { font-weight: 600; background: var(--lgray); border-top: 1.5px solid var(--border); font-size: 13px; }
+.svc-badge { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 9px; font-weight: 600; }
+
+/* ── VIAJES TABLE ── */
+.viaje-fase { padding: 6px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ── CHART BAR ── */
+.chart-bar { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.chart-bar-label { font-size: 11px; width: 120px; flex-shrink: 0; }
+.chart-bar-track { flex: 1; background: var(--lgray); border-radius: 4px; height: 20px; overflow: hidden; }
+.chart-bar-fill { height: 20px; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; transition: width 0.4s ease; }
+.chart-bar-val { font-family: 'DM Mono', monospace; font-size: 10px; color: white; white-space: nowrap; }
+
+/* ── SNAPSHOTS ── */
+.snap-label { font-size: 11px; font-weight: 500; color: rgba(0,0,0,0.5); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.snap-input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.15s; background: var(--white); }
+.snap-input:focus { border-color: var(--input-border); }
+.snap-btn { background: var(--dark); color: white; border: none; border-radius: 8px; padding: 11px 20px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+.snap-btn:hover { background: var(--mid); }
+.snap-btn:disabled { background: var(--gray); color: rgba(0,0,0,0.4); cursor: not-allowed; }
+.snap-msg { padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; }
+.snap-msg-ok   { background: #F0FAF6; color: var(--green); border: 1px solid #A7F3D0; }
+.snap-msg-warn { background: #FFF7ED; color: #92400E; border: 1px solid #FCD34D; }
+.snap-msg-error{ background: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; }
+.hist-row { display: flex; align-items: center; gap: 10px; padding: 10px 6px; border-bottom: 1px solid var(--lgray); }
+.hist-row:last-child { border-bottom: none; }
+.hist-main { display: flex; align-items: flex-start; gap: 8px; flex: 1; min-width: 0; }
+.hist-sem { font-size: 14px; flex-shrink: 0; padding-top: 1px; }
+.hist-label { font-size: 12px; font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-meta  { font-size: 10px; color: rgba(0,0,0,0.4); margin-top: 2px; }
+.hist-nota  { font-size: 10px; color: rgba(0,0,0,0.5); font-style: italic; margin-top: 2px; }
+.hist-pvp   { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 600; color: var(--dark); white-space: nowrap; }
+.hist-load-btn { background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 6px; padding: 4px 10px; font-size: 11px; font-family: 'DM Sans', sans-serif; color: #1e40af; cursor: pointer; white-space: nowrap; }
+.hist-load-btn:hover { background: #DBEAFE; }
+.hist-empty { font-size: 12px; color: rgba(0,0,0,0.35); text-align: center; padding: 24px; font-style: italic; }
+
+.card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+.card-header { padding: 12px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.card-header h3 { font-size: 13px; font-weight: 600; color: var(--dark); }
+.card-header span { font-size: 11px; color: rgba(0,0,0,0.4); }
+.mono { font-family: 'DM Mono', monospace; }
+.note { font-size: 11px; color: rgba(0,0,0,0.4); font-style: italic; margin-top: 8px; padding: 0 18px 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">
+    <h1>CTS Compostela · Herramienta Presupuestaria</h1>
+    <p>globaldit México para FONATUR · Propuesta de servicios turísticos · 15 meses</p>
+  </div>
+  <div class="header-badge">
+    <div class="pvp-label">Precio de venta IVA incl.</div>
+    <div class="pvp mono" id="h-pvp-iva">—</div>
+    <div class="semaforo" id="h-semaforo">Calculando…</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('presupuesto')">Presupuesto</div>
+  <div class="tab" onclick="showTab('parametros')">Parámetros</div>
+  <div class="tab" onclick="showTab('equipo')">Equipo</div>
+  <div class="tab" onclick="showTab('viajes')">Viajes</div>
+  <div class="tab" onclick="showTab('mensual')">Distribución mensual</div>
+  <div class="tab" onclick="showTab('snapshots')">💾 Escenarios</div>
+</div>
+
+<div class="main">
+
+<!-- ══ PRESUPUESTO ══ -->
+<div class="section active" id="sec-presupuesto">
+  <div class="budget-wrap">
+    <div class="waterfall">
+      <div class="wf-block-title">Costes directos</div>
+      <div class="wf-line">
+        <div class="wf-dot" style="background:var(--mid)"></div>
+        <div class="wf-label">Honorarios equipo globaldit México</div>
+        <div class="wf-bar-wrap"><div class="wf-bar-bg"><div class="wf-bar-fill" id="bar-hon" style="background:var(--mid)"></div></div></div>
+        <div class="wf-pct" id="pct-hon">—</div>
+        <div class="wf-amount" id="val-hon">—</div>
+      </div>
+      <div class="wf-line">
+        <div class="wf-dot" style="background:var(--s1)"></div>
+        <div class="wf-label">Subcontratación FutureBrand</div>
+        <div class="wf-bar-wrap"><div class="wf-bar-bg"><div class="wf-bar-fill" id="bar-fb" style="background:var(--s1)"></div></div></div>
+        <div class="wf-pct" id="pct-fb">—</div>
+        <div class="wf-amount" id="val-fb">—</div>
+      </div>
+      <div class="wf-line">
+        <div class="wf-dot" style="background:var(--s4)"></div>
+        <div class="wf-label">Viajes y desplazamientos (12 desp. ESP↔MEX)</div>
+        <div class="wf-bar-wrap"><div class="wf-bar-bg"><div class="wf-bar-fill" id="bar-vj" style="background:var(--s4)"></div></div></div>
+        <div class="wf-pct" id="pct-vj">—</div>
+        <div class="wf-amount" id="val-vj">—</div>
+      </div>
+      <div class="wf-subtotal">
+        <div class="sl">Subtotal costes directos</div>
+        <div class="sa" id="val-dir">—</div>
+      </div>
+      <div class="wf-block-title">Costes variables de estructura</div>
+      <div class="wf-line">
+        <div class="wf-dot" style="background:var(--amber)"></div>
+        <div class="wf-label" id="lbl-cv">Costes variables (—% s/directos)</div>
+        <div class="wf-bar-wrap"><div class="wf-bar-bg"><div class="wf-bar-fill" id="bar-cv" style="background:var(--amber)"></div></div></div>
+        <div class="wf-pct" id="pct-cv">—</div>
+        <div class="wf-amount" id="val-cv">—</div>
+      </div>
+      <div class="wf-subtotal">
+        <div class="sl">Coste total del proyecto</div>
+        <div class="sa" id="val-coste">—</div>
+      </div>
+      <div class="wf-block-title">Rentabilidad</div>
+      <div class="wf-margen">
+        <div class="ml" id="lbl-mg">Margen de rentabilidad (—%)</div>
+        <div class="ma" id="val-mg">—</div>
+      </div>
+      <div class="wf-pvp-neto">
+        <div class="pl">Precio de venta neto (sin IVA)</div>
+        <div class="pa" id="val-pvp">—</div>
+      </div>
+      <div class="wf-iva">
+        <div class="il" id="lbl-iva">IVA México (—%)</div>
+        <div class="ia" id="val-iva">—</div>
+      </div>
+      <div class="wf-total">
+        <div class="tl">PRECIO DE VENTA IVA INCLUIDO</div>
+        <div class="ta" id="val-pvp-iva">—</div>
+      </div>
+    </div>
+
+    <div class="side-panel">
+      <div class="side-card">
+        <div class="side-card-title">KPIs del proyecto</div>
+        <div class="kpi-grid">
+          <div class="kpi-item"><div class="kpi-val" id="k-dias">—</div><div class="kpi-lbl">Días-persona</div></div>
+          <div class="kpi-item"><div class="kpi-val">15</div><div class="kpi-lbl">Meses duración</div></div>
+          <div class="kpi-item"><div class="kpi-val" id="k-coste-dia">—</div><div class="kpi-lbl">€ medio/día</div></div>
+          <div class="kpi-item"><div class="kpi-val" id="k-coste-mes">—</div><div class="kpi-lbl">€/mes promedio</div></div>
+        </div>
+        <div class="alert-box" id="alert-box">—</div>
+      </div>
+
+      <div class="side-card">
+        <div class="side-card-title">Composición del presupuesto</div>
+        <div style="padding:14px 12px" id="chart-container"></div>
+        <p class="note">% sobre precio de venta neto</p>
+      </div>
+
+      <div class="side-card">
+        <div class="side-card-title">Parámetros activos</div>
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px" id="active-params"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PARÁMETROS ══ -->
+<div class="section" id="sec-parametros">
+  <div class="params-grid">
+    <div class="param-card">
+      <div class="param-card-header">Tarifas de honorarios (€/día)</div>
+      <div class="param-row">
+        <div class="param-label">Director de proyecto (Kevin Salvador)</div>
+        <input class="param-input" type="number" id="p-t-kevin" value="200" min="0" oninput="recalc()">
+        <div class="param-unit">€/d</div>
+      </div>
+      <div class="param-row">
+        <div class="param-label">Asesor estratégico (Tono Franco)</div>
+        <input class="param-input" type="number" id="p-t-tono" value="240" min="0" oninput="recalc()">
+        <div class="param-unit">€/d</div>
+      </div>
+      <div class="param-row">
+        <div class="param-label">Especialistas Senior (Claudia / Mavi / Daniel)</div>
+        <input class="param-input" type="number" id="p-t-senior" value="200" min="0" oninput="recalc()">
+        <div class="param-unit">€/d</div>
+      </div>
+      <div class="param-row">
+        <div class="param-label">Perfiles Junior (S1 / S2 / S3 / S4 / S5)</div>
+        <input class="param-input" type="number" id="p-t-junior" value="120" min="0" oninput="recalc()">
+        <div class="param-unit">€/d</div>
+      </div>
+    </div>
+
+    <div class="param-card">
+      <div class="param-card-header">Dedicaciones por perfil (días totales)</div>
+      <div class="param-row"><div class="param-label">Kevin Salvador — Director + S5</div>
+        <input class="param-input" type="number" id="p-d-kevin" value="120" min="0" oninput="recalc()"><div class="param-unit">días</div></div>
+      <div class="param-row"><div class="param-label">Tono Franco — Asesor + S1</div>
+        <input class="param-input" type="number" id="p-d-tono" value="60" min="0" oninput="recalc()"><div class="param-unit">días</div></div>
+      <div class="param-row"><div class="param-label">Claudia Chávez — Especialista S3</div>
+        <input class="param-input" type="number" id="p-d-claudia" value="74" min="0" oninput="recalc()"><div class="param-unit">días</div></div>
+      <div class="param-row"><div class="param-label">Mavi Franco — Especialista S2</div>
+        <input class="param-input" type="number" id="p-d-mavi" value="85" min="0" oninput="recalc()"><div class="param-unit">días</div></div>
+      <div class="param-row"><div class="param-label">Daniel Da Silva — Especialista S4</div>
+        <input class="param-input" type="number" id="p-d-daniel" value="77" min="0" oninput="recalc()"><div class="param-unit">días</div></div>
+      <div class="param-row"><div class="param-label">Junior S1</div>
+        <input class="param-input" type="number" id="p-d-jr1" value="57" min="0" oninput="recalc()"><div class="param-unit">días</div></div>
+      <div class="param-row"><div class="param-label">Junior S2</div>
+        <input class="param-input" type="number" id="p-d-jr2" value="82" min="0" oninput="recalc()"><div class="param-unit">días</div></div>
+      <div class="param-row"><div class="param-label">Junior S3</div>
+        <input class="param-input" type="number" id="p-d-jr3" value="82" min="0" oninput="recalc()"><div class="param-unit">días</div></div>
+      <div class="param-row"><div class="param-label">Junior S4</div>
+        <input class="param-input" type="number" id="p-d-jr4" value="78" min="0" oninput="recalc()"><div class="param-unit">días</div></div>
+      <div class="param-row"><div class="param-label">Junior S5</div>
+        <input class="param-input" type="number" id="p-d-jr5" value="58" min="0" oninput="recalc()"><div class="param-unit">días</div></div>
+    </div>
+
+    <div class="param-card">
+      <div class="param-card-header">Parámetros de viaje</div>
+      <div class="param-row"><div class="param-label">Vuelo España → México i/v (€/persona)</div>
+        <input class="param-input" type="number" id="p-vuelo" value="1200" min="0" oninput="recalc()"><div class="param-unit">€</div></div>
+      <div class="param-row"><div class="param-label">Alojamiento hotel (€/noche)</div>
+        <input class="param-input" type="number" id="p-hotel" value="120" min="0" oninput="recalc()"><div class="param-unit">€</div></div>
+      <div class="param-row"><div class="param-label">Manutención / dietas (€/día y persona)</div>
+        <input class="param-input" type="number" id="p-dieta" value="60" min="0" oninput="recalc()"><div class="param-unit">€</div></div>
+      <div class="param-row"><div class="param-label">Traslado CDMX → Compostela i/v (€/pers.)</div>
+        <input class="param-input" type="number" id="p-cdmx" value="200" min="0" oninput="recalc()"><div class="param-unit">€</div></div>
+      <div class="param-row"><div class="param-label">Traslado Morelia → CDMX i/v (€/pers.)</div>
+        <input class="param-input" type="number" id="p-morelia" value="80" min="0" oninput="recalc()"><div class="param-unit">€</div></div>
+      <div class="param-row"><div class="param-label">Traslado Morelia → Compostela i/v (€/pers.)</div>
+        <input class="param-input" type="number" id="p-moreliacomp" value="220" min="0" oninput="recalc()"><div class="param-unit">€</div></div>
+    </div>
+
+    <div class="param-card">
+      <div class="param-card-header">Parámetros financieros</div>
+      <div class="param-row"><div class="param-label">FutureBrand — precio cerrado de compra</div>
+        <input class="param-input" type="number" id="p-fb" value="15000" min="0" oninput="recalc()"><div class="param-unit">€</div></div>
+      <div class="param-row"><div class="param-label">Costes variables de estructura (%)</div>
+        <input class="param-input" type="number" id="p-cv" value="10" min="0" max="100" step="0.5" oninput="recalc()"><div class="param-unit">%</div></div>
+      <div class="param-row"><div class="param-label">Margen de rentabilidad (% sobre PVP)</div>
+        <input class="param-input" type="number" id="p-mg" value="25" min="0" max="99" step="0.5" oninput="recalc()"><div class="param-unit">%</div></div>
+      <div class="param-row"><div class="param-label">IVA — México (%)</div>
+        <input class="param-input" type="number" id="p-iva" value="16" min="0" max="50" step="0.5" oninput="recalc()"><div class="param-unit">%</div></div>
+      <div class="param-row"><div class="param-label">Presupuesto máximo — IVA incluido</div>
+        <input class="param-input" type="number" id="p-techo" value="348000" min="0" oninput="recalc()"><div class="param-unit">€</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EQUIPO ══ -->
+<div class="section" id="sec-equipo">
+  <div class="card">
+    <div class="card-header"><h3>Equipo del proyecto</h3><span id="eq-total-label">—</span></div>
+    <table class="team-table" id="team-table">
+      <thead><tr>
+        <th>Perfil</th><th>Rol</th><th class="r">Días</th>
+        <th class="r">Tarifa €/d</th><th class="r">Coste total</th><th class="r">% honorarios</th>
+      </tr></thead>
+      <tbody id="team-tbody"></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Honorarios por servicio</h3></div>
+    <table class="team-table" id="svc-table">
+      <thead><tr>
+        <th>Servicio</th><th class="r">Días tot.</th><th class="r">Coste (€)</th>
+        <th class="r">% honorarios</th>
+      </tr></thead>
+      <tbody id="svc-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ VIAJES ══ -->
+<div class="section" id="sec-viajes">
+  <div class="card">
+    <div class="card-header"><h3>Detalle de viajes y desplazamientos</h3><span id="vj-total-label">—</span></div>
+    <table class="team-table">
+      <thead><tr>
+        <th style="width:50px">ID</th><th>Concepto</th><th class="r">Días</th>
+        <th class="r">Vuelos</th><th class="r">Aloj.</th><th class="r">Dietas</th>
+        <th class="r">Internos</th><th class="r">TOTAL</th>
+      </tr></thead>
+      <tbody id="viaje-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ MENSUAL ══ -->
+<div class="section" id="sec-mensual">
+  <div class="card">
+    <div class="card-header"><h3>Distribución mensual de carga</h3><span>días de trabajo por perfil y mes</span></div>
+    <div style="overflow-x:auto"><table class="team-table" id="mensual-table" style="min-width:900px"></table></div>
+    <div style="padding:12px 18px;display:flex;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(0,0,0,0.5)"><div style="width:12px;height:12px;border-radius:2px;background:#E8F5E9"></div>≤3 días</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(0,0,0,0.5)"><div style="width:12px;height:12px;border-radius:2px;background:#C8E6C9"></div>4-6 días</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(0,0,0,0.5)"><div style="width:12px;height:12px;border-radius:2px;background:#FFF9C4"></div>7-9 días</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(0,0,0,0.5)"><div style="width:12px;height:12px;border-radius:2px;background:#FFE082"></div>10-12 días</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(0,0,0,0.5)"><div style="width:12px;height:12px;border-radius:2px;background:#FFAB91"></div>≥13 días</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SNAPSHOTS ══ -->
+<div class="section" id="sec-snapshots">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+
+    <div class="card">
+      <div class="card-header"><h3>Guardar escenario actual</h3></div>
+      <div style="padding:18px;display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label class="snap-label">Tu nombre</label>
+          <input class="snap-input" id="snap-autor" type="text" placeholder="p.ej. Kevin Salvador">
+        </div>
+        <div>
+          <label class="snap-label">Etiqueta del escenario <span style="color:#DC2626">*</span></label>
+          <input class="snap-input" id="snap-etiqueta" type="text" placeholder="p.ej. Propuesta inicial cliente · v1">
+        </div>
+        <div>
+          <label class="snap-label">Nota opcional</label>
+          <textarea class="snap-input" id="snap-nota" rows="3" placeholder="Contexto, decisiones tomadas, próximos pasos…" style="resize:vertical"></textarea>
+        </div>
+        <div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:8px;padding:12px;font-size:11px;color:#0369A1">
+          <strong>¿Qué se guarda?</strong> Todos los parámetros actuales + los resultados del presupuesto (PVP, honorarios, viajes, margen…). Podrás recuperar cualquier versión en el futuro.
+        </div>
+        <button class="snap-btn" id="btn-save" onclick="saveSnapshot()">Guardar escenario</button>
+        <div id="snap-msg" class="snap-msg" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Historial de escenarios</h3>
+        <button onclick="loadHistory()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:rgba(0,0,0,0.5)">↻ Actualizar</button>
+      </div>
+      <div id="history-list" style="padding:12px">
+        <div class="hist-empty">Conecta el Apps Script para ver el historial</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card" style="margin-top:20px">
+    <div class="card-header"><h3>Resumen del escenario actual</h3><span id="snap-fecha-actual">—</span></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border)" id="snap-resumen-grid"></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ── DATOS ESTÁTICOS ──────────────────────────────────────────────────────────
+const PERFILES = [
+  {cod:"KEVIN",  nombre:"Kevin Salvador",  rol:"Director + S5",    tarifa_id:"p-t-kevin",  dias_id:"p-d-kevin",  color:"#993C1D", bg:"#FCEDE8"},
+  {cod:"TONO",   nombre:"Tono Franco",     rol:"Asesor + S1",      tarifa_id:"p-t-tono",   dias_id:"p-d-tono",   color:"#534AB7", bg:"#EDE8FD"},
+  {cod:"CLAUDIA",nombre:"Claudia Chávez",  rol:"Especialista S3",  tarifa_id:"p-t-senior", dias_id:"p-d-claudia",color:"#854F0B", bg:"#FEF3E2"},
+  {cod:"MAVI",   nombre:"Mavi Franco",     rol:"Especialista S2",  tarifa_id:"p-t-senior", dias_id:"p-d-mavi",   color:"#0F6E56", bg:"#E0F5EE"},
+  {cod:"DANIEL", nombre:"Daniel Da Silva", rol:"Especialista S4",  tarifa_id:"p-t-senior", dias_id:"p-d-daniel", color:"#185FA5", bg:"#E3EFF9"},
+  {cod:"JR_S1",  nombre:"Junior S1",       rol:"Producción S1",    tarifa_id:"p-t-junior", dias_id:"p-d-jr1",    color:"#7B7BB5", bg:"#EDE8FD"},
+  {cod:"JR_S2",  nombre:"Junior S2",       rol:"Producción S2",    tarifa_id:"p-t-junior", dias_id:"p-d-jr2",    color:"#3A9B7A", bg:"#E0F5EE"},
+  {cod:"JR_S3",  nombre:"Junior S3",       rol:"Producción S3",    tarifa_id:"p-t-junior", dias_id:"p-d-jr3",    color:"#B07820", bg:"#FEF3E2"},
+  {cod:"JR_S4",  nombre:"Junior S4",       rol:"Producción S4",    tarifa_id:"p-t-junior", dias_id:"p-d-jr4",    color:"#2E7FBA", bg:"#E3EFF9"},
+  {cod:"JR_S5",  nombre:"Junior S5",       rol:"Producción S5",    tarifa_id:"p-t-junior", dias_id:"p-d-jr5",    color:"#CC5533", bg:"#FCEDE8"},
+];
+
+const SERVICIOS = [
+  {key:"TR",label:"Dirección y coordinación", color:"#3D3D3A",bg:"#EBEBEB", days:[48,24,7,5,5,0,0,0,0,0]},
+  {key:"S1",label:"S1 · Estrategia turística",color:"#534AB7",bg:"#EDE8FD", days:[6,20,0,0,0,57,0,0,0,0]},
+  {key:"S2",label:"S2 · Portfolio y posicionamiento",color:"#0F6E56",bg:"#E0F5EE", days:[10,6,0,50,0,0,82,0,0,0]},
+  {key:"S3",label:"S3 · Proyectos estratégicos",color:"#854F0B",bg:"#FEF3E2", days:[12,5,53,0,0,0,0,82,0,0]},
+  {key:"S4",label:"S4 · Modelo DTI",color:"#185FA5",bg:"#E3EFF9", days:[8,3,0,0,55,0,0,0,78,0]},
+  {key:"S5",label:"S5 · Oficina Técnica (OTT)",color:"#993C1D",bg:"#FCEDE8", days:[36,2,14,30,17,0,0,0,0,58]},
+];
+
+const VIAJES = [
+  {id:"A1",fase:1,concepto:"Arranque — Kevin Salvador (Compostela, 15d)",nesp:1,ntot:1,dias:15,ncc:1,nmc:0,nmcomp:0},
+  {id:"A2",fase:1,concepto:"Arranque — Claudia Chávez (Morelia→Compostela, 7d)",nesp:0,ntot:1,dias:7,ncc:0,nmc:0,nmcomp:1},
+  {id:"V1",fase:1,concepto:"Coord. 1 — diagnósticos iniciales",nesp:2,ntot:2,dias:5,ncc:2,nmc:0,nmcomp:0},
+  {id:"V2",fase:1,concepto:"Coord. 2 — validación S2 (3 España)",nesp:3,ntot:3,dias:5,ncc:3,nmc:0,nmcomp:0},
+  {id:"V3",fase:1,concepto:"Coord. 3 — S3/S1 + Claudia desde Morelia",nesp:2,ntot:3,dias:5,ncc:2,nmc:1,nmcomp:0},
+  {id:"V4",fase:2,concepto:"Coord. 4 — DTI/OTT (Kevin + Daniel)",nesp:2,ntot:2,dias:5,ncc:2,nmc:0,nmcomp:0},
+  {id:"V5",fase:2,concepto:"Coord. 5 — S2/S3 + Claudia desde Morelia",nesp:3,ntot:4,dias:5,ncc:3,nmc:1,nmcomp:0},
+  {id:"V6",fase:2,concepto:"Coord. 6 — marca CTS / FutureBrand",nesp:2,ntot:2,dias:5,ncc:2,nmc:0,nmcomp:0},
+  {id:"V7",fase:2,concepto:"Coord. 7 — entrega S3/S1 + Claudia",nesp:2,ntot:3,dias:5,ncc:2,nmc:1,nmcomp:0},
+  {id:"V8",fase:3,concepto:"Coord. 8 — DTI+OTT+Tono",nesp:3,ntot:3,dias:5,ncc:3,nmc:0,nmcomp:0},
+  {id:"V9",fase:3,concepto:"Coord. 9 — revisión general",nesp:2,ntot:2,dias:5,ncc:2,nmc:0,nmcomp:0},
+  {id:"V10",fase:3,concepto:"Coord. 10 — presentación final + Claudia",nesp:3,ntot:4,dias:5,ncc:3,nmc:1,nmcomp:0},
+];
+
+const DIST = {
+  KEVIN:  [11,10,10,9,9,9,8,8,8,8,8,8,8,8,8],
+  TONO:   [5,5,4,4,4,4,4,4,4,4,4,4,4,4,2],
+  CLAUDIA:[8,8,7,6,6,6,5,5,4,4,3,3,3,3,3],
+  MAVI:   [4,7,7,7,6,6,6,6,6,6,6,5,5,4,4],
+  DANIEL: [6,6,6,6,5,5,5,5,5,5,5,5,5,4,4],
+  JR_S1:  [2,4,4,4,4,4,4,4,4,4,4,4,4,3,2],
+  JR_S2:  [4,7,7,6,6,6,6,6,6,6,5,5,5,4,3],
+  JR_S3:  [4,7,7,6,6,6,6,6,6,6,5,5,5,4,3],
+  JR_S4:  [5,6,6,6,5,5,5,5,5,5,5,5,5,4,5],
+  JR_S5:  [4,5,4,4,4,4,4,4,4,4,4,4,4,4,4],
+};
+
+const FASE_COLORS = {1:"#3D3D8A",2:"#0A5C45",3:"#6B3010"};
+const FASE_LABELS = {1:"Fase 1 · Arranque y campo",2:"Fase 2 · Producción principal",3:"Fase 3 · Cierre y entrega"};
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function p(id) { return parseFloat(document.getElementById(id).value)||0; }
+function fmt(n) { return Math.round(n).toLocaleString('es-ES')+'€'; }
+function fmtN(n) { return Math.round(n).toLocaleString('es-ES'); }
+function heat(v) {
+  if(!v) return '#F5F5F3';
+  if(v<=3) return '#E8F5E9'; if(v<=6) return '#C8E6C9';
+  if(v<=9) return '#FFF9C4'; if(v<=12) return '#FFE082'; return '#FFAB91';
+}
+
+// ── RECALC ───────────────────────────────────────────────────────────────────
+function recalc() {
+  // Tarifas
+  const T = {KEVIN:p('p-t-kevin'),TONO:p('p-t-tono'),CLAUDIA:p('p-t-senior'),
+             MAVI:p('p-t-senior'),DANIEL:p('p-t-senior'),
+             JR_S1:p('p-t-junior'),JR_S2:p('p-t-junior'),JR_S3:p('p-t-junior'),
+             JR_S4:p('p-t-junior'),JR_S5:p('p-t-junior')};
+  // Días
+  const D = {KEVIN:p('p-d-kevin'),TONO:p('p-d-tono'),CLAUDIA:p('p-d-claudia'),
+             MAVI:p('p-d-mavi'),DANIEL:p('p-d-daniel'),
+             JR_S1:p('p-d-jr1'),JR_S2:p('p-d-jr2'),JR_S3:p('p-d-jr3'),
+             JR_S4:p('p-d-jr4'),JR_S5:p('p-d-jr5')};
+  const VP = {vuelo:p('p-vuelo'),hotel:p('p-hotel'),dieta:p('p-dieta'),
+              cdmx:p('p-cdmx'),morelia:p('p-morelia'),moreliacomp:p('p-moreliacomp')};
+  const fb = p('p-fb'); const cv_pct = p('p-cv')/100;
+  const mg_pct = p('p-mg')/100; const iva_pct = p('p-iva')/100;
+  const techo = p('p-techo');
+
+  // Honorarios
+  const honorarios = PERFILES.reduce((s,pf)=>s+D[pf.cod]*T[pf.cod],0);
+  const dias_tot = PERFILES.reduce((s,pf)=>s+D[pf.cod],0);
+
+  // Viajes
+  const viaje_calc = VIAJES.map(v=>{
+    const noches=Math.max(v.dias-1,1);
+    const vuelos=v.nesp*VP.vuelo;
+    const aloj=v.ntot*noches*VP.hotel;
+    const dietas=v.ntot*v.dias*VP.dieta;
+    const internos=v.ncc*VP.cdmx+v.nmc*VP.morelia+v.nmcomp*VP.moreliacomp;
+    return {...v, vuelos, aloj, dietas, internos, total:vuelos+aloj+dietas+internos};
+  });
+  const viajes_total = viaje_calc.reduce((s,v)=>s+v.total,0);
+
+  // Presupuesto
+  const directos = honorarios + fb + viajes_total;
+  const cv = directos * cv_pct;
+  const coste = directos + cv;
+  const pvp = mg_pct<1 ? coste/(1-mg_pct) : 0;
+  const margen = pvp - coste;
+  const iva = pvp * iva_pct;
+  const pvp_iva = pvp + iva;
+  const ok = pvp_iva <= techo;
+
+  // ── UPDATE DOM ──
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  const barW = (id,pct) => {
+    const el=document.getElementById(id);
+    if(el) el.style.width=Math.min(100,pct*100).toFixed(1)+'%';
+  };
+  const maxDirect = Math.max(honorarios,fb,viajes_total);
+
+  set('val-hon',fmt(honorarios)); barW('bar-hon',honorarios/maxDirect);
+  set('pct-hon',(honorarios/pvp*100).toFixed(1)+'%');
+  set('val-fb',fmt(fb)); barW('bar-fb',fb/maxDirect);
+  set('pct-fb',(fb/pvp*100).toFixed(1)+'%');
+  set('val-vj',fmt(viajes_total)); barW('bar-vj',viajes_total/maxDirect);
+  set('pct-vj',(viajes_total/pvp*100).toFixed(1)+'%');
+  set('val-dir',fmt(directos));
+  document.getElementById('lbl-cv').textContent=`Costes variables (${(cv_pct*100).toFixed(0)}% s/directos)`;
+  set('val-cv',fmt(cv)); barW('bar-cv',cv/maxDirect);
+  set('pct-cv',(cv/pvp*100).toFixed(1)+'%');
+  set('val-coste',fmt(coste));
+  document.getElementById('lbl-mg').textContent=`Margen de rentabilidad (${(mg_pct*100).toFixed(0)}%)`;
+  set('val-mg',fmt(margen));
+  set('val-pvp',fmt(pvp));
+  document.getElementById('lbl-iva').textContent=`IVA México (${(iva_pct*100).toFixed(0)}%)`;
+  set('val-iva',fmt(iva));
+  set('val-pvp-iva',fmt(pvp_iva));
+  set('h-pvp-iva',fmt(pvp_iva));
+
+  const sem = document.getElementById('h-semaforo');
+  sem.textContent = ok ? `✅ Dentro del techo (${fmt(techo)} IVA incl.)` : `❌ Excede el techo en ${fmt(pvp_iva-techo)}`;
+  sem.className = 'semaforo '+(ok?'ok':'fail');
+
+  // KPIs
+  set('k-dias',fmtN(dias_tot));
+  set('k-coste-dia',fmt(honorarios/dias_tot)+'');
+  set('k-coste-mes',fmt(pvp/15)+'');
+  const alertEl=document.getElementById('alert-box');
+  alertEl.textContent = ok ? `✅ Presupuesto dentro del techo · Diferencia: ${fmt(techo-pvp_iva)}` : `❌ Excede en ${fmt(pvp_iva-techo)} — ajusta parámetros`;
+  alertEl.className = 'alert-box '+(ok?'alert-ok':'alert-fail');
+
+  // Chart
+  const chartData=[
+    {label:"Honorarios",val:honorarios,pct:honorarios/pvp,color:"var(--mid)"},
+    {label:"FutureBrand",val:fb,pct:fb/pvp,color:"var(--s1)"},
+    {label:"Viajes",val:viajes_total,pct:viajes_total/pvp,color:"var(--s4)"},
+    {label:"Variables",val:cv,pct:cv/pvp,color:"var(--amber)"},
+    {label:"Margen",val:margen,pct:margen/pvp,color:"var(--green)"},
+  ];
+  document.getElementById('chart-container').innerHTML = chartData.map(d=>`
+    <div class="chart-bar">
+      <div class="chart-bar-label" style="color:${d.color};font-weight:500;font-size:11px">${d.label}</div>
+      <div class="chart-bar-track">
+        <div class="chart-bar-fill" style="width:${(d.pct*100).toFixed(1)}%;background:${d.color}">
+          <span class="chart-bar-val">${(d.pct*100).toFixed(1)}%</span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  // Active params
+  document.getElementById('active-params').innerHTML = [
+    ['Kevin','200€/d · 120d'],['Tono','240€/d · 60d'],['Seniors','200€/d'],
+    ['Juniors','120€/d'],['FutureBrand',fmt(fb)],['Costes variables',(cv_pct*100).toFixed(0)+'%'],
+    ['Margen',(mg_pct*100).toFixed(0)+'%'],['IVA',(iva_pct*100).toFixed(0)+'%'],
+  ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(0,0,0,0.5)"><span>${k}</span><span class="mono" style="color:var(--dark)">${v}</span></div>`).join('');
+
+  // Equipo table
+  const hon_total=honorarios;
+  document.getElementById('eq-total-label').textContent=`${fmtN(dias_tot)} días-persona · ${fmt(hon_total)} honorarios`;
+  let tbodyHTML='';
+  PERFILES.forEach(pf=>{
+    const dias=D[pf.cod]; const tarifa=T[pf.cod]; const coste_pf=dias*tarifa;
+    const pct=(coste_pf/hon_total*100).toFixed(1);
+    tbodyHTML+=`<tr>
+      <td style="font-weight:600;color:${pf.color}">${pf.nombre}</td>
+      <td style="color:rgba(0,0,0,0.4);font-size:11px">${pf.rol}</td>
+      <td class="r">${dias}</td>
+      <td class="r">${tarifa}€</td>
+      <td class="r" style="font-weight:600;color:${pf.color}">${fmt(coste_pf)}</td>
+      <td class="r">${pct}%</td>
+    </tr>`;
+  });
+  tbodyHTML+=`<tr class="tot-row"><td>TOTAL</td><td></td><td class="r">${fmtN(dias_tot)}</td><td class="r"></td><td class="r">${fmt(hon_total)}</td><td class="r">100%</td></tr>`;
+  document.getElementById('team-tbody').innerHTML=tbodyHTML;
+
+  // Servicios table
+  let svcHTML='';
+  SERVICIOS.forEach(s=>{
+    const t_arr=[T.KEVIN,T.TONO,T.CLAUDIA,T.MAVI,T.DANIEL,T.JR_S1,T.JR_S2,T.JR_S3,T.JR_S4,T.JR_S5];
+    const dias=s.days.reduce((a,b)=>a+b,0);
+    const coste_s=s.days.reduce((a,d,i)=>a+d*t_arr[i],0);
+    const pct=(coste_s/hon_total*100).toFixed(1);
+    svcHTML+=`<tr style="background:${s.bg}">
+      <td style="font-weight:600;color:${s.color}">${s.label}</td>
+      <td class="r">${dias}</td>
+      <td class="r" style="font-weight:600;color:${s.color}">${fmt(coste_s)}</td>
+      <td class="r">${pct}%</td>
+    </tr>`;
+  });
+  svcHTML+=`<tr class="tot-row"><td>TOTAL HONORARIOS</td><td class="r">${fmtN(dias_tot)}</td><td class="r">${fmt(hon_total)}</td><td class="r">100%</td></tr>`;
+  document.getElementById('svc-tbody').innerHTML=svcHTML;
+
+  // Viajes table
+  document.getElementById('vj-total-label').textContent=`Total: ${fmt(viajes_total)}`;
+  let vjHTML=''; let curFase=0;
+  viaje_calc.forEach(v=>{
+    if(v.fase!==curFase){
+      curFase=v.fase;
+      vjHTML+=`<tr><td colspan="8" class="viaje-fase" style="background:${FASE_COLORS[v.fase]}20;color:${FASE_COLORS[v.fase]}">${FASE_LABELS[v.fase]}</td></tr>`;
+    }
+    vjHTML+=`<tr>
+      <td style="font-weight:600;color:rgba(0,0,0,0.4)">${v.id}</td>
+      <td style="font-size:11px">${v.concepto}</td>
+      <td class="r">${v.dias}</td>
+      <td class="r">${fmt(v.vuelos)}</td>
+      <td class="r">${fmt(v.aloj)}</td>
+      <td class="r">${fmt(v.dietas)}</td>
+      <td class="r">${fmt(v.internos)}</td>
+      <td class="r" style="font-weight:600;color:var(--green)">${fmt(v.total)}</td>
+    </tr>`;
+  });
+  const vTot={vuelos:viaje_calc.reduce((s,v)=>s+v.vuelos,0),aloj:viaje_calc.reduce((s,v)=>s+v.aloj,0),
+              dietas:viaje_calc.reduce((s,v)=>s+v.dietas,0),internos:viaje_calc.reduce((s,v)=>s+v.internos,0)};
+  vjHTML+=`<tr class="tot-row"><td colspan="2">TOTAL VIAJES</td><td class="r"></td>
+    <td class="r">${fmt(vTot.vuelos)}</td><td class="r">${fmt(vTot.aloj)}</td>
+    <td class="r">${fmt(vTot.dietas)}</td><td class="r">${fmt(vTot.internos)}</td>
+    <td class="r">${fmt(viajes_total)}</td></tr>`;
+  document.getElementById('viaje-tbody').innerHTML=vjHTML;
+
+  // Mensual table
+  const meses=Array.from({length:15},(_,i)=>`M${i+1}`);
+  let mHTML=`<thead><tr><th>Perfil</th>`;
+  meses.forEach(m=>mHTML+=`<th style="text-align:center;font-size:9px">${m}</th>`);
+  mHTML+=`<th class="r">Total</th></tr></thead><tbody>`;
+  // Fases header
+  mHTML+=`<tr><td></td>`;
+  [[1,5,"3D3D8A"],[6,10,"0A5C45"],[11,15,"6B3010"]].forEach(([start,end,col])=>{
+    mHTML+=`<td colspan="${end-start+1}" style="background:#${col}20;color:#${col};font-size:9px;font-weight:600;text-align:center;padding:4px">F${[1,2,3][[[1,5],[6,10],[11,15]].findIndex(r=>r[0]===start)]}</td>`;
+  });
+  mHTML+=`<td></td></tr>`;
+  PERFILES.forEach(pf=>{
+    mHTML+=`<tr><td style="font-weight:600;color:${pf.color};font-size:11px">${pf.nombre}</td>`;
+    DIST[pf.cod].forEach(v=>{
+      mHTML+=`<td style="text-align:center;background:${heat(v)};font-size:11px;font-family:'DM Mono',monospace;font-weight:${v>=10?'600':'400'}">${v||'—'}</td>`;
+    });
+    mHTML+=`<td class="r" style="font-weight:600;color:${pf.color}">${D[pf.cod]}</td></tr>`;
+  });
+  // Total fila
+  mHTML+=`<tr style="background:var(--dark)"><td style="color:white;font-weight:600;font-size:11px">TOTAL</td>`;
+  meses.forEach((_,i)=>{
+    const s=PERFILES.reduce((sum,pf)=>sum+DIST[pf.cod][i],0);
+    mHTML+=`<td style="text-align:center;color:white;font-family:'DM Mono',monospace;font-size:11px;font-weight:500">${s}</td>`;
+  });
+  mHTML+=`<td class="r" style="color:white;font-weight:600">${fmtN(dias_tot)}</td></tr>`;
+  mHTML+=`</tbody>`;
+  document.getElementById('mensual-table').innerHTML=mHTML;
+}
+
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  // Find the tab that calls this id
+  document.querySelectorAll('.tab').forEach(t=>{
+    if(t.getAttribute('onclick')===`showTab('${id}')`) t.classList.add('active');
+  });
+  document.getElementById('sec-'+id).classList.add('active');
+}
+const showTab2 = showTab;
+
+// Init
+recalc();
+
+// ── APPS SCRIPT INTEGRATION ──────────────────────────────────────────────────
+// Reemplaza esta URL con la de tu Web App después de publicarla en Apps Script
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyq7OGcctx1FI431-sO2D4JMdNyQxTb0EvVUAGYSx90kWtOms4znu3t6gynw9yOeL9U/exec";
+
+function getParams() {
+  return {
+    t_kevin: p('p-t-kevin'), t_tono: p('p-t-tono'),
+    t_senior: p('p-t-senior'), t_junior: p('p-t-junior'),
+    d_kevin: p('p-d-kevin'), d_tono: p('p-d-tono'),
+    d_claudia: p('p-d-claudia'), d_mavi: p('p-d-mavi'), d_daniel: p('p-d-daniel'),
+    d_jr1: p('p-d-jr1'), d_jr2: p('p-d-jr2'), d_jr3: p('p-d-jr3'),
+    d_jr4: p('p-d-jr4'), d_jr5: p('p-d-jr5'),
+    vp_vuelo: p('p-vuelo'), vp_hotel: p('p-hotel'), vp_dieta: p('p-dieta'),
+    vp_cdmx: p('p-cdmx'), vp_morelia: p('p-morelia'), vp_moreliacomp: p('p-moreliacomp'),
+    fp_fb: p('p-fb'), fp_cv: p('p-cv')/100, fp_mg: p('p-mg')/100,
+    fp_iva: p('p-iva')/100, fp_techo: p('p-techo')
+  };
+}
+
+function getResultados() {
+  const params = getParams();
+  const T = { KEVIN:params.t_kevin, TONO:params.t_tono,
+              CLAUDIA:params.t_senior, MAVI:params.t_senior, DANIEL:params.t_senior,
+              JR_S1:params.t_junior, JR_S2:params.t_junior, JR_S3:params.t_junior,
+              JR_S4:params.t_junior, JR_S5:params.t_junior };
+  const D = { KEVIN:params.d_kevin, TONO:params.d_tono, CLAUDIA:params.d_claudia,
+              MAVI:params.d_mavi, DANIEL:params.d_daniel,
+              JR_S1:params.d_jr1, JR_S2:params.d_jr2, JR_S3:params.d_jr3,
+              JR_S4:params.d_jr4, JR_S5:params.d_jr5 };
+  const VP = { vuelo:params.vp_vuelo, hotel:params.vp_hotel, dieta:params.vp_dieta,
+               cdmx:params.vp_cdmx, morelia:params.vp_morelia, moreliacomp:params.vp_moreliacomp };
+
+  const honorarios = PERFILES.reduce((s,pf)=>s+D[pf.cod]*T[pf.cod],0);
+  const viajes_total = VIAJES.reduce((s,v)=>{
+    const noches=Math.max(v.dias-1,1);
+    return s + v.nesp*VP.vuelo + v.ntot*noches*VP.hotel + v.ntot*v.dias*VP.dieta
+             + v.ncc*VP.cdmx + v.nmc*VP.morelia + v.nmcomp*VP.moreliacomp;
+  },0);
+  const fb=params.fp_fb, cv_pct=params.fp_cv, mg_pct=params.fp_mg, iva_pct=params.fp_iva;
+  const directos=honorarios+fb+viajes_total;
+  const cv=directos*cv_pct;
+  const coste=directos+cv;
+  const pvp=mg_pct<1?coste/(1-mg_pct):0;
+  const margen=pvp-coste;
+  const iva=pvp*iva_pct;
+  return { honorarios, futurebrand:fb, viajes:viajes_total,
+           costes_variables:cv, coste_total:coste, margen, pvp_neto:pvp, iva, pvp_iva:pvp+iva };
+}
+
+async function saveSnapshot() {
+  if (APPS_SCRIPT_URL === "REEMPLAZAR_CON_TU_URL_DE_WEB_APP") {
+    showSnapshotMsg("⚠️ Configura primero la URL del Apps Script en el HTML", "warn"); return;
+  }
+  const autor    = document.getElementById('snap-autor').value.trim() || "Sin identificar";
+  const etiqueta = document.getElementById('snap-etiqueta').value.trim();
+  const nota     = document.getElementById('snap-nota').value.trim();
+  if (!etiqueta) { showSnapshotMsg("Escribe una etiqueta para identificar este escenario", "warn"); return; }
+
+  const btn = document.getElementById('btn-save');
+  btn.textContent = "Guardando…"; btn.disabled = true;
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "save", autor, etiqueta, nota,
+        resultados: getResultados(), parametros: getParams()
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showSnapshotMsg(`✅ ${data.mensaje} · ${data.fecha}`, "ok");
+      document.getElementById('snap-etiqueta').value = "";
+      document.getElementById('snap-nota').value = "";
+      loadHistory();
+    } else {
+      showSnapshotMsg("❌ Error: " + (data.error||"respuesta inesperada"), "error");
+    }
+  } catch(e) {
+    showSnapshotMsg("❌ Error de conexión: " + e.message, "error");
+  }
+  btn.textContent = "Guardar escenario"; btn.disabled = false;
+}
+
+async function loadHistory() {
+  if (APPS_SCRIPT_URL === "REEMPLAZAR_CON_TU_URL_DE_WEB_APP") return;
+  try {
+    const res  = await fetch(APPS_SCRIPT_URL + "?action=getAll");
+    const data = await res.json();
+    renderHistory(data.snapshots || []);
+  } catch(e) { console.warn("No se pudo cargar el historial:", e.message); }
+}
+
+function renderHistory(snapshots) {
+  const cont = document.getElementById('history-list');
+  if (!snapshots.length) {
+    cont.innerHTML = '<div class="hist-empty">No hay escenarios guardados todavía</div>'; return;
+  }
+  cont.innerHTML = snapshots.slice(0,20).map(s => {
+    const ok = parseFloat(s.PVP_IVA) <= parseFloat(s.FP_Techo);
+    return `<div class="hist-row">
+      <div class="hist-main">
+        <span class="hist-sem">${ok?'✅':'❌'}</span>
+        <div>
+          <div class="hist-label">${s.Etiqueta}</div>
+          <div class="hist-meta">${s.Fecha} · ${s.Autor}</div>
+          ${s.Nota ? `<div class="hist-nota">${s.Nota}</div>` : ''}
+        </div>
+      </div>
+      <div class="hist-pvp">${Math.round(parseFloat(s.PVP_IVA)).toLocaleString('es-ES')}€</div>
+      <button class="hist-load-btn" onclick="loadSnapshot('${s.ID}')">Cargar</button>
+    </div>`;
+  }).join('');
+}
+
+async function loadSnapshot(id) {
+  if (!confirm("¿Cargar este escenario? Se reemplazarán todos los parámetros actuales.")) return;
+  try {
+    const res  = await fetch(`${APPS_SCRIPT_URL}?action=getById&id=${id}`);
+    const data = await res.json();
+    if (data.error) { showSnapshotMsg("❌ " + data.error, "error"); return; }
+    const s = data.snapshot;
+    const setVal = (id, val) => { const el=document.getElementById(id); if(el) el.value=val; };
+    setVal('p-t-kevin', s.T_Kevin); setVal('p-t-tono', s.T_Tono);
+    setVal('p-t-senior', s.T_Senior); setVal('p-t-junior', s.T_Junior);
+    setVal('p-d-kevin', s.D_Kevin); setVal('p-d-tono', s.D_Tono);
+    setVal('p-d-claudia', s.D_Claudia); setVal('p-d-mavi', s.D_Mavi);
+    setVal('p-d-daniel', s.D_Daniel);
+    setVal('p-d-jr1', s.D_Jr1); setVal('p-d-jr2', s.D_Jr2); setVal('p-d-jr3', s.D_Jr3);
+    setVal('p-d-jr4', s.D_Jr4); setVal('p-d-jr5', s.D_Jr5);
+    setVal('p-vuelo', s.VP_Vuelo); setVal('p-hotel', s.VP_Hotel);
+    setVal('p-dieta', s.VP_Dieta); setVal('p-cdmx', s.VP_CDMX);
+    setVal('p-morelia', s.VP_Morelia); setVal('p-moreliacomp', s.VP_MoreliaComp);
+    setVal('p-fb', s.FP_FB);
+    setVal('p-cv', parseFloat(s.FP_CV_pct)*100);
+    setVal('p-mg', parseFloat(s.FP_Margen_pct)*100);
+    setVal('p-iva', parseFloat(s.FP_IVA_pct)*100);
+    setVal('p-techo', s.FP_Techo);
+    recalc();
+    showSnapshotMsg(`✅ Escenario "${s.Etiqueta}" cargado correctamente`, "ok");
+    showTab2('presupuesto');
+  } catch(e) { showSnapshotMsg("❌ Error: " + e.message, "error"); }
+}
+
+function showSnapshotMsg(msg, type) {
+  const el = document.getElementById('snap-msg');
+  el.textContent = msg;
+  el.className = 'snap-msg snap-msg-' + type;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display='none', 5000);
+}
+
+// Cargar historial al arrancar
+setTimeout(loadHistory, 500);
+</script>
+</body>
+</html>
